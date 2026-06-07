@@ -1,1 +1,11 @@
 .ipynb_checkpoints
+
+# Lab5 training artifacts and processed datasets (exceed GitHub file size limits)
+Lab5/output/**/model.safetensors
+Lab5/output/**/optimizer.pt
+Lab5/output/**/scaler.pt
+Lab5/output/**/scheduler.pt
+Lab5/output/**/rng_state.pth
+Lab5/output/runs/
+Lab5/output_qa/runs/
+Lab5/question-context-classification/train/data-00000-of-00001.arrow
