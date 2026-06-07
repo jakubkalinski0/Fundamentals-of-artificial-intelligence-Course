@@ -1,4 +1,4 @@
-# Fundamentals of Artificial Intelligence
+# Fundamentals of Artificial Intelligence Course
 
 Course laboratory materials for **Basics of Artificial Intelligence** at AGH University of Science and Technology. The repository contains Jupyter notebooks and supporting scripts that walk through core machine learning workflows: data preparation, model training, evaluation, and tuning.
 
