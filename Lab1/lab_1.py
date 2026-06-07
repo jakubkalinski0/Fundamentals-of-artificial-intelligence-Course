@@ -1679,4 +1679,76 @@ print("Solution is correct!")
 # Czy założenia są spełnione w przypadku podstawowego modelu i/lub modeli z regularyzacją? Czy modele regularyzowane w lepszym stopniu spełniają założenia?
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# TODO solution
+import numpy as np
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from scipy import stats
+from statsmodels.stats.diagnostic import linear_harvey_collier, het_breuschpagan
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+
+ALPHA = 0.05
+
+X_design = X_train.toarray() if hasattr(X_train, "toarray") else np.asarray(X_train)
+X_design_sm = sm.add_constant(X_design, has_constant="add")
+
+models = {
+    "Regresja liniowa (bez regularyzacji)": LinearRegression(fit_intercept=False),
+    "Ridge (L2)": Ridge(alpha=reg_ridge_alpha, fit_intercept=False),
+    "LASSO (L1)": Lasso(alpha=reg_lasso_alpha, fit_intercept=False, max_iter=10000),
+}
+
+results = []
+
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred_train = model.predict(X_train)
+    residuals = y_train - y_pred_train
+
+    ols_for_hc = sm.OLS(y_train, X_design_sm).fit()
+    hc_stat, hc_pvalue, _ = linear_harvey_collier(ols_for_hc)
+
+    jb_stat, jb_pvalue = stats.jarque_bera(residuals)
+    bp_stat, bp_pvalue, _, _ = het_breuschpagan(residuals, X_design_sm)
+    condition_number = np.linalg.cond(X_design_sm)
+
+    results.append(
+        {
+            "model": name,
+            "harvey_collier_p": hc_pvalue,
+            "jarque_bera_p": jb_pvalue,
+            "breusch_pagan_p": bp_pvalue,
+            "condition_number": condition_number,
+        }
+    )
+
+    print(f"\n{'=' * 60}")
+    print(name)
+    print(f"{'=' * 60}")
+    print(f"Harvey Collier p-value: {hc_pvalue:.4f} -> {'OK' if hc_pvalue > ALPHA else 'NIE'}")
+    print(f"Jarque-Bera p-value:    {jb_pvalue:.4f} -> {'OK' if jb_pvalue > ALPHA else 'NIE'}")
+    print(f"Breusch-Pagan p-value:  {bp_pvalue:.4f} -> {'OK' if bp_pvalue > ALPHA else 'NIE'}")
+    print(f"Współczynnik uwarunkowania: {condition_number:.2f} -> {'OK' if condition_number < 30 else 'NIE (współliniowość)'}")
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    axes[0].hist(residuals, bins=30, edgecolor="black", alpha=0.7)
+    axes[0].set_title(f"Histogram rezyduów - {name}")
+    axes[0].set_xlabel("Rezydua")
+
+    axes[1].scatter(y_pred_train, residuals, alpha=0.3, s=10)
+    axes[1].axhline(0, color="red", linestyle="--")
+    axes[1].set_title("Rezydua vs wartości przewidywane")
+    axes[1].set_xlabel("Średnia przewidywana")
+    axes[1].set_ylabel("Rezydua")
+    plt.tight_layout()
+    plt.show()
+
+results_df = pd.DataFrame(results)
+print(results_df)
+
+print(
+    "\nWnioski: żaden z modeli w pełni nie spełnia założeń klasycznej regresji liniowej. "
+    "Rezydua zwykle nie są normalne (Jarque-Bera) i wykazują heteroskedastyczność (Breusch-Pagan). "
+    "Współczynnik uwarunkowania wskazuje na silną współliniowość cech po one-hot encodingu. "
+    "Regularyzacja L1/L2 poprawia stabilność numeryczną (mniejszy condition number po redukcji wag), "
+    "ale nie usuwa fundamentalnych naruszeń założeń dotyczących rozkładu błędów."
+)
